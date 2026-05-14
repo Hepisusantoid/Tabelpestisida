@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Harga Pestisida — Sumber Makmur</title>
+<title>🌿 Harga Pestisida — Sumber Makmur</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -135,7 +136,11 @@ td.center { text-align:center; }
 .modal-footer { display:flex;gap:10px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap; }
 .btn-outline { background:transparent;border:1.5px solid var(--border);color:var(--text2);padding:10px 18px;border-radius:var(--radius-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s; }
 .btn-outline:hover { border-color:var(--green);color:var(--green); }
-.modal-box { background:#fff;border-radius:var(--radius);padding:28px 24px;max-width:500px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+.modal-box { background:#fff;border-radius:var(--radius);padding:24px 20px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+@media(max-width:480px){
+  .overlay { align-items:flex-end;padding:0; }
+  .modal-box { border-radius:20px 20px 0 0;padding:24px 20px 32px;max-width:100%; }
+}
 
 .toast { position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:12px 24px;border-radius:100px;font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,0.2);transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),opacity 0.35s;opacity:0;z-index:200;white-space:nowrap; }
 .toast.show { transform:translateX(-50%) translateY(0);opacity:1; }
@@ -284,9 +289,9 @@ td.center { text-align:center; }
 </div>
 <!-- MODAL: Edit Data -->
 <div class="overlay" id="overlay-edit">
-  <div class="modal-box" onclick="event.stopPropagation()" style="max-width:500px;">
-    <h3 style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:18px;">✏️ Edit Data Harga</h3>
-    <div class="form-grid" style="grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h3 style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:8px;">✏️ Edit Data Harga</h3>
+    <div style="display:flex;flex-direction:column;gap:14px;">
       <div class="field">
         <label>Nama Pestisida</label>
         <input type="text" id="edit-nama" placeholder="Nama pestisida"/>
@@ -295,22 +300,24 @@ td.center { text-align:center; }
         <label>Musim</label>
         <select id="edit-musim"></select>
       </div>
-      <div class="field">
-        <label>Harga Online (Rp)</label>
-        <input type="text" id="edit-online" placeholder="85.000" inputmode="numeric"/>
-      </div>
-      <div class="field">
-        <label>Harga Offline (Rp)</label>
-        <input type="text" id="edit-offline" placeholder="90.000" inputmode="numeric"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="field">
+          <label>Harga Online (Rp)</label>
+          <input type="text" id="edit-online" placeholder="85.000" inputmode="numeric"/>
+        </div>
+        <div class="field">
+          <label>Harga Offline (Rp)</label>
+          <input type="text" id="edit-offline" placeholder="90.000" inputmode="numeric"/>
+        </div>
       </div>
       <div class="field">
         <label>Tanggal</label>
         <input type="date" id="edit-tanggal"/>
       </div>
     </div>
-    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
-      <button class="btn" style="background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);" onclick="closeEdit()">Batal</button>
-      <button class="btn btn-primary" onclick="simpanEdit()" id="btn-simpan-edit">💾 Simpan Perubahan</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;">
+      <button class="btn" style="background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);justify-content:center;" onclick="closeEdit()">Batal</button>
+      <button class="btn btn-primary" style="justify-content:center;" onclick="simpanEdit()" id="btn-simpan-edit">💾 Simpan</button>
     </div>
   </div>
 </div>
