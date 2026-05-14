@@ -111,6 +111,8 @@ td.center { text-align:center; }
 .num-cell { color:var(--muted);font-size:13px;font-weight:600; }
 .btn-del { background:transparent;border:1.5px solid #FFCDD2;color:#EF9A9A;border-radius:6px;padding:5px 12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s; }
 .btn-del:hover { border-color:var(--red);color:var(--red);background:var(--red-bg); }
+.btn-edit { background:transparent;border:1.5px solid #BBDEFB;color:#64B5F6;border-radius:6px;padding:5px 12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;margin-right:4px; }
+.btn-edit:hover { border-color:var(--blue);color:var(--blue);background:var(--blue-bg); }
 
 .empty-state { text-align:center;padding:56px 24px;color:var(--muted); }
 .empty-state .icon { font-size:48px;margin-bottom:12px; }
@@ -133,6 +135,7 @@ td.center { text-align:center; }
 .modal-footer { display:flex;gap:10px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap; }
 .btn-outline { background:transparent;border:1.5px solid var(--border);color:var(--text2);padding:10px 18px;border-radius:var(--radius-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s; }
 .btn-outline:hover { border-color:var(--green);color:var(--green); }
+.modal-box { background:#fff;border-radius:var(--radius);padding:28px 24px;max-width:500px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.2); }
 
 .toast { position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:12px 24px;border-radius:100px;font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,0.2);transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),opacity 0.35s;opacity:0;z-index:200;white-space:nowrap; }
 .toast.show { transform:translateX(-50%) translateY(0);opacity:1; }
@@ -279,6 +282,39 @@ td.center { text-align:center; }
   </div>
 
 </div>
+<!-- MODAL: Edit Data -->
+<div class="overlay" id="overlay-edit">
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-width:500px;">
+    <h3 style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:18px;">✏️ Edit Data Harga</h3>
+    <div class="form-grid" style="grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;">
+      <div class="field">
+        <label>Nama Pestisida</label>
+        <input type="text" id="edit-nama" placeholder="Nama pestisida"/>
+      </div>
+      <div class="field">
+        <label>Musim</label>
+        <select id="edit-musim"></select>
+      </div>
+      <div class="field">
+        <label>Harga Online (Rp)</label>
+        <input type="text" id="edit-online" placeholder="85.000" inputmode="numeric"/>
+      </div>
+      <div class="field">
+        <label>Harga Offline (Rp)</label>
+        <input type="text" id="edit-offline" placeholder="90.000" inputmode="numeric"/>
+      </div>
+      <div class="field">
+        <label>Tanggal</label>
+        <input type="date" id="edit-tanggal"/>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
+      <button class="btn" style="background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);" onclick="closeEdit()">Batal</button>
+      <button class="btn btn-primary" onclick="simpanEdit()" id="btn-simpan-edit">💾 Simpan Perubahan</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -481,7 +517,10 @@ function renderTable(){
       <td class="right"><span class="price price-offline">${rp(d.offline)}</span></td>
       <td class="right"><span class="badge ${bc}">${bl}</span></td>
       <td class="tanggal-cell">${formatTanggal(d.tanggal)}</td>
-      <td class="center"><button class="btn-del" onclick="hapusData(${d.id})">Hapus</button></td>
+      <td class="center">
+        <button class="btn-edit" onclick="bukaEdit(${d.id})">Edit</button>
+        <button class="btn-del" onclick="hapusData(${d.id})">Hapus</button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -498,7 +537,78 @@ function updateStats(){
   document.getElementById('stat-avg-offline').textContent=rpShort(Math.round(avgF));
 }
 
-let toastTimer;
+// ── EDIT DATA ──────────────────────────────────────────────────
+let editId = null;
+
+function bukaEdit(id){
+  const d = items.find(x=>x.id===id);
+  if(!d) return;
+  editId = id;
+
+  document.getElementById('edit-nama').value    = d.nama;
+  document.getElementById('edit-online').value  = Number(d.online).toLocaleString('id-ID');
+  document.getElementById('edit-offline').value = Number(d.offline).toLocaleString('id-ID');
+  document.getElementById('edit-tanggal').value = d.tanggal;
+
+  // isi dropdown musim
+  const sel = document.getElementById('edit-musim');
+  sel.innerHTML = '<option value="">— Tanpa Musim —</option>';
+  musims.forEach(m=>{
+    const opt = document.createElement('option');
+    opt.value = m.id; opt.textContent = m.nama;
+    if(m.id === d.musimId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  document.getElementById('overlay-edit').classList.add('show');
+}
+
+function closeEdit(){
+  document.getElementById('overlay-edit').classList.remove('show');
+  editId = null;
+}
+
+async function simpanEdit(){
+  if(!editId) return;
+  const nama    = document.getElementById('edit-nama').value.trim();
+  const musimId = document.getElementById('edit-musim').value;
+  const online  = parseRibuan(document.getElementById('edit-online').value);
+  const offline = parseRibuan(document.getElementById('edit-offline').value);
+  const tanggal = document.getElementById('edit-tanggal').value;
+
+  if(!nama)    { showToast('⚠ Nama wajib diisi','danger'); return; }
+  if(!online)  { showToast('⚠ Harga online tidak valid','danger'); return; }
+  if(!offline) { showToast('⚠ Harga offline tidak valid','danger'); return; }
+  if(!tanggal) { showToast('⚠ Tanggal wajib diisi','danger'); return; }
+
+  const btn = document.getElementById('btn-simpan-edit');
+  btn.textContent = '⏳ Menyimpan...'; btn.disabled = true;
+
+  const prev = [...items];
+  const idx  = items.findIndex(x=>x.id===editId);
+  items[idx] = { ...items[idx], nama, musimId, online, offline, tanggal };
+
+  try{
+    await saveData();
+    renderTable(); updateStats();
+    closeEdit();
+    showToast('✓ Data berhasil diubah!','success');
+  }catch(e){
+    items = prev;
+    renderTable();
+    showToast('⚠ Gagal menyimpan','danger');
+  }finally{
+    btn.textContent = '💾 Simpan Perubahan'; btn.disabled = false;
+  }
+}
+
+// format ribuan untuk input edit
+['edit-online','edit-offline'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',function(){
+    const raw=this.value.replace(/\D/g,'');
+    this.value=raw?Number(raw).toLocaleString('id-ID'):'';
+  });
+});
 function showToast(msg,type=''){
   const el=document.getElementById('toast');
   el.textContent=msg;el.className='toast '+type+' show';
@@ -510,10 +620,11 @@ document.addEventListener('keydown',e=>{
     if(e.target.id==='inp-musim-nama'){simpanMusim();return;}
     if(['inp-nama','inp-online','inp-offline','inp-tanggal'].includes(e.target.id)){tambahData();return;}
   }
-  if(e.key==='Escape'){closeConfig();closeMusimModal();}
+  if(e.key==='Escape'){closeConfig();closeMusimModal();closeEdit();}
 });
 document.getElementById('overlay-config').addEventListener('click',function(e){if(e.target===this)closeConfig();});
 document.getElementById('overlay-musim').addEventListener('click',function(e){if(e.target===this)closeMusimModal();});
+document.getElementById('overlay-edit').addEventListener('click',function(e){if(e.target===this)closeEdit();});
 </script>
 </body>
 </html>
