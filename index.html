@@ -458,10 +458,9 @@ async function tambahData(){
   const msgEl=document.getElementById('form-msg');
   msgEl.className='form-msg';
   let err='';
-  if(!nama)err='⚠ Nama pestisida wajib diisi.';
-  else if(!online)err='⚠ Harga online tidak valid.';
-  else if(!offline)err='⚠ Harga offline tidak valid.';
+  if(!nama)    err='⚠ Nama pestisida wajib diisi.';
   else if(!tanggal)err='⚠ Tanggal wajib diisi.';
+  // harga online & offline opsional — tidak divalidasi
   if(err){msgEl.textContent=err;msgEl.className='form-msg show';return;}
   isSaving=true;
   const btn=document.getElementById('btn-tambah');
@@ -513,16 +512,22 @@ function renderTable(){
     return;
   }
   tbody.innerHTML=list.map((d,i)=>{
-    const sel=d.offline-d.online;
-    const [bc,bl]=sel>0?['badge-hemat','↓ Hemat '+rp(sel)]:sel<0?['badge-mahal','↑ Mahal '+rp(Math.abs(sel))]:['badge-sama','= Sama'];
+    const hasOnline  = d.online  > 0;
+    const hasOffline = d.offline > 0;
+    const sel = hasOnline && hasOffline ? d.offline - d.online : null;
+    let badgeHtml;
+    if(sel === null)       badgeHtml = '<span class="badge badge-sama">—</span>';
+    else if(sel > 0)       badgeHtml = `<span class="badge badge-hemat">↓ Hemat ${rp(sel)}</span>`;
+    else if(sel < 0)       badgeHtml = `<span class="badge badge-mahal">↑ Mahal ${rp(Math.abs(sel))}</span>`;
+    else                   badgeHtml = '<span class="badge badge-sama">= Sama</span>';
     const mn=getMusimNama(d.musimId);
     return `<tr>
       <td class="center num-cell">${i+1}</td>
       <td><div class="nama-cell">${d.nama}</div></td>
       <td>${mn?`<span class="musim-pill">🌾 ${mn}</span>`:'<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
-      <td class="right"><span class="price price-online">${rp(d.online)}</span></td>
-      <td class="right"><span class="price price-offline">${rp(d.offline)}</span></td>
-      <td class="right"><span class="badge ${bc}">${bl}</span></td>
+      <td class="right"><span class="price price-online">${hasOnline?rp(d.online):'<span style="color:var(--muted)">—</span>'}</span></td>
+      <td class="right"><span class="price price-offline">${hasOffline?rp(d.offline):'<span style="color:var(--muted)">—</span>'}</span></td>
+      <td class="right">${badgeHtml}</td>
       <td class="tanggal-cell">${formatTanggal(d.tanggal)}</td>
       <td class="center">
         <button class="btn-edit" onclick="bukaEdit(${d.id})">Edit</button>
@@ -537,15 +542,15 @@ function updateStats(){
   document.getElementById('stat-total').textContent=filtered.length||'0';
   const m=activeMusim?musims.find(x=>x.id===activeMusim):null;
   document.getElementById('stat-musim').textContent=m?m.nama:'Semua';
-  if(!filtered.length){document.getElementById('stat-avg-online').textContent='—';document.getElementById('stat-avg-offline').textContent='—';return;}
-  const avgO=filtered.reduce((s,d)=>s+d.online,0)/filtered.length;
-  const avgF=filtered.reduce((s,d)=>s+d.offline,0)/filtered.length;
-  document.getElementById('stat-avg-online').textContent=rpShort(Math.round(avgO));
-  document.getElementById('stat-avg-offline').textContent=rpShort(Math.round(avgF));
+  const withOnline  = filtered.filter(d=>d.online>0);
+  const withOffline = filtered.filter(d=>d.offline>0);
+  document.getElementById('stat-avg-online').textContent  = withOnline.length  ? rpShort(Math.round(withOnline.reduce((s,d)=>s+d.online,0)/withOnline.length))   : '—';
+  document.getElementById('stat-avg-offline').textContent = withOffline.length ? rpShort(Math.round(withOffline.reduce((s,d)=>s+d.offline,0)/withOffline.length)) : '—';
 }
 
 // ── EDIT DATA ──────────────────────────────────────────────────
 let editId = null;
+let toastTimer;
 
 function bukaEdit(id){
   const d = items.find(x=>x.id===id);
@@ -553,11 +558,11 @@ function bukaEdit(id){
   editId = id;
 
   document.getElementById('edit-nama').value    = d.nama;
-  document.getElementById('edit-online').value  = Number(d.online).toLocaleString('id-ID');
-  document.getElementById('edit-offline').value = Number(d.offline).toLocaleString('id-ID');
+  // tampil kosong jika 0 agar user tahu opsional
+  document.getElementById('edit-online').value  = d.online  ? Number(d.online).toLocaleString('id-ID')  : '';
+  document.getElementById('edit-offline').value = d.offline ? Number(d.offline).toLocaleString('id-ID') : '';
   document.getElementById('edit-tanggal').value = d.tanggal;
 
-  // isi dropdown musim
   const sel = document.getElementById('edit-musim');
   sel.innerHTML = '<option value="">— Tanpa Musim —</option>';
   musims.forEach(m=>{
@@ -583,9 +588,8 @@ async function simpanEdit(){
   const offline = parseRibuan(document.getElementById('edit-offline').value);
   const tanggal = document.getElementById('edit-tanggal').value;
 
+  // hanya nama & tanggal wajib, harga opsional
   if(!nama)    { showToast('⚠ Nama wajib diisi','danger'); return; }
-  if(!online)  { showToast('⚠ Harga online tidak valid','danger'); return; }
-  if(!offline) { showToast('⚠ Harga offline tidak valid','danger'); return; }
   if(!tanggal) { showToast('⚠ Tanggal wajib diisi','danger'); return; }
 
   const btn = document.getElementById('btn-simpan-edit');
@@ -603,9 +607,9 @@ async function simpanEdit(){
   }catch(e){
     items = prev;
     renderTable();
-    showToast('⚠ Gagal menyimpan','danger');
+    showToast('⚠ Gagal menyimpan: '+e.message,'danger');
   }finally{
-    btn.textContent = '💾 Simpan Perubahan'; btn.disabled = false;
+    btn.textContent = '💾 Simpan'; btn.disabled = false;
   }
 }
 
@@ -616,6 +620,7 @@ async function simpanEdit(){
     this.value=raw?Number(raw).toLocaleString('id-ID'):'';
   });
 });
+
 function showToast(msg,type=''){
   const el=document.getElementById('toast');
   el.textContent=msg;el.className='toast '+type+' show';
